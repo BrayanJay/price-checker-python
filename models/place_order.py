@@ -14,8 +14,17 @@ class PlaceOrder:
 
         PlaceOrder.placed_orders.append({
             "product_id": product_id,
-            "quantity": quantity,
-            "customer_id": customer_id
+            "customer_id": customer_id,
+            "quantity": quantity
+        })
+        print("Order Placed Successfully!")
+
+    @staticmethod
+    def append_order(order: 'PlaceOrder'):
+        PlaceOrder.placed_orders.append({
+            "product_id": order.product_id,
+            "quantity": order.quantity,
+            "customer_id": order.customer_id
         })
         print("Order Placed Successfully!")
 
@@ -25,4 +34,4 @@ class PlaceOrder:
             print("No orders placed.")
         else:
             for order in PlaceOrder.placed_orders:
-                print(f"Order - Product ID: {order.product_id}, Quantity: {order.quantity}, Customer ID: {order.customer_id}")
+                print(f"Order - Product ID: {order['product_id']}, Quantity: {order['quantity']}, Customer ID: {order['customer_id']}")
