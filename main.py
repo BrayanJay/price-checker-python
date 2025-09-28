@@ -37,13 +37,13 @@ class Main:
                 from models.customer import Customer
                 Customer.view_customers()
             elif choice == '5':
-                from pricing_rule import PricingRule
+                from models.pricing_rule import PricingRule
                 PricingRule.sub_menu()
             elif choice == '6':
-                from order import Order
-                Order.place_order()
+                from models.place_order import PlaceOrder
+                PlaceOrder.add_order()
             elif choice == '7':
-                from loyalty_prices import LoyaltyPrices
+                from price_hierarchy.loyalty_prices import LoyaltyPrices
                 customer_id = input("Enter customer ID: ")
                 product_id = input("Enter product ID: ")
                 discount_rate = input("Enter discount rate: ")
