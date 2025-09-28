@@ -1,5 +1,5 @@
 from price_interface import Price
-from tier import Tier
+from constants.tier import Tier
 
 class TieredPrices(Price):
 

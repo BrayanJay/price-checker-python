@@ -25,16 +25,16 @@ class Main:
                 break
 
             elif choice == '1':
-                from product import Product
+                from models.product import Product
                 Product.add_product()
             elif choice == '2':
-                from customer import Customer
+                from models.customer import Customer
                 Customer.add_customer()
             elif choice == '3':
-                from product import Product
+                from models.product import Product
                 Product.view_products()
             elif choice == '4':
-                from customer import Customer
+                from models.customer import Customer
                 Customer.view_customers()
             elif choice == '5':
                 from pricing_rule import PricingRule

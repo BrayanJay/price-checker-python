@@ -1,5 +1,5 @@
-from group import Group
-from tier import Tier
+from constants.group import Group
+from constants.tier import Tier
 
 class Customer:
 
