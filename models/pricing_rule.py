@@ -1,5 +1,5 @@
-from tier import Tier
-from group import Group
+from constants.tier import Tier
+from constants.group import Group
 
 class PricingRule:
 
