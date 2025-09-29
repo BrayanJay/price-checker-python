@@ -3,16 +3,6 @@ from constants.tier import Tier
 
 class Customer:
 
-    """
-    STRUCTURE
-    {
-    customer_id: 1,
-    name: "Alice",
-    tier: "Gold",
-    groups: ["Regular", "VIP"],
-    loyalty_customer: False
-    }
-    """
     customers = []
 
     def __init__(self, customer_id: int, name: str, tier: Tier, groups: list[Group], loyalty_customer: bool = False):
@@ -21,9 +11,6 @@ class Customer:
         self.tier = tier
         self.groups = groups
         self.loyalty_customer = loyalty_customer
-
-    def __str__(self):
-        return f"Customer ID: {self.customer_id}, Name: {self.name}, Tier: {self.tier.value}, Groups: {[group.value for group in self.groups]}, Loyalty Customer: {self.loyalty_customer}"
 
     def get_customer_id(self):
         return self.customer_id
@@ -48,14 +35,35 @@ class Customer:
         print("Add New Customer")
         customer_id = int(input("Enter customer ID: "))
         name = input("Enter customer name: ")
-        tier_input = input("Enter customer tier (Silver, Gold, Platinum): ").upper()
-        tier = getattr(Tier, tier_input)
+        
+        # Handle Tier input
+        tier_input = input("Enter customer tier (Silver, Gold, Platinum): ").strip()
+        tier = None
+        for t in Tier:
+            if t.value.lower() == tier_input.lower():
+                tier = t
+                break
+        
+        if tier is None:
+            print(f"Invalid tier '{tier_input}'. Available tiers: {', '.join([t.value for t in Tier])}")
+            return
         
         num_groups = int(input("Enter number of groups: "))
         groups = []
+        print(f"Available groups: {', '.join([g.value for g in Group])}")
+        
         for i in range(num_groups):
-            group_input = input(f"Enter group {i + 1} (Regular, Bulk, VIP): ").upper()
-            groups.append(getattr(Group, group_input))
+            group_input = input(f"Enter group {i + 1} (Regular, Bulk, VIP): ").strip()
+            group = None
+            for g in Group:
+                if g.value.lower() == group_input.lower():
+                    group = g
+                    break
+            
+            if group is None:
+                print(f"Invalid group '{group_input}'. Available groups: {', '.join([g.value for g in Group])}")
+                return
+            groups.append(group)
         
         loyalty_customer = input("Is this a loyalty customer? (yes/no): ").lower() == "yes"
 
@@ -66,6 +74,12 @@ class Customer:
             "groups": [group.value for group in groups],
             "loyalty_customer": loyalty_customer
         })
+        
+        print(f"✅ Customer '{name}' created successfully!")
+        print(f"   - ID: {customer_id}")
+        print(f"   - Tier: {tier.value}")
+        print(f"   - Groups: {', '.join([group.value for group in groups])}")
+        print(f"   - Loyalty Customer: {loyalty_customer}")
 
     @staticmethod
     def view_customers():
@@ -91,15 +105,32 @@ class Customer:
             if new_name:
                 customer['name'] = new_name
             
-            tier_input = input(f"Enter new tier (current: {customer['tier']}) (Silver, Gold, Platinum): ")
+            tier_input = input(f"Enter new tier (current: {customer['tier']}) (Silver, Gold, Platinum): ").strip()
             if tier_input:
-                customer['tier'] = getattr(Tier, tier_input.upper()).value
+                tier = None
+                for t in Tier:
+                    if t.value.lower() == tier_input.lower():
+                        tier = t
+                        break
+                if tier:
+                    customer['tier'] = tier.value
+                else:
+                    print(f"Invalid tier '{tier_input}'. Available tiers: {', '.join([t.value for t in Tier])}")
             
             new_groups = []
             for i, group in enumerate(customer['groups']):
-                group_input = input(f"Enter new group {i + 1} (current: {group}) (Regular, Bulk, VIP): ")
+                group_input = input(f"Enter new group {i + 1} (current: {group}) (Regular, Bulk, VIP): ").strip()
                 if group_input:
-                    new_groups.append(getattr(Group, group_input.upper()).value)
+                    found_group = None
+                    for g in Group:
+                        if g.value.lower() == group_input.lower():
+                            found_group = g
+                            break
+                    if found_group:
+                        new_groups.append(found_group.value)
+                    else:
+                        print(f"Invalid group '{group_input}'. Available groups: {', '.join([g.value for g in Group])}")
+                        new_groups.append(group)  # Keep the old value
                 else:
                     new_groups.append(group)
             customer['groups'] = new_groups

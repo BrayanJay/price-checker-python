@@ -115,7 +115,7 @@ class Main:
 
     @staticmethod
     def add_customer():
-        """Add a new customer to memory"""
+        
         try:
             print("\n--- Add Customer ---")
             customer_id = int(input("Enter customer ID (hint: integers only): "))
@@ -132,7 +132,17 @@ class Main:
             for tier in Tier:
                 print(f"  {tier.value}")
             tier_input = input("Enter customer tier (Eg:-Silver): ").upper()
-            tier = Tier(tier_input)
+            
+            # Find the matching tier enum
+            tier = None
+            for t in Tier:
+                if t.value.lower() == tier_input.lower():
+                    tier = t
+                    break
+            
+            if tier is None:
+                print(f"Invalid tier '{tier_input}'. Available tiers: {', '.join([t.value for t in Tier])}")
+                return
             
             # Select groups
             print("Available groups:")
@@ -141,18 +151,26 @@ class Main:
             
             groups = []
             while True:
-                group_input = input("Enter a group name or 'done' to complete Customer Creation: ").upper()
-                if group_input == 'DONE':
+                group_input = input("Enter a group name or 'done' to complete Customer Creation: ").strip()
+                if group_input.lower() == 'done':
                     break
-                try:
-                    group = Group(group_input)
-                    if group not in groups:
-                        groups.append(group)
-                        print(f"Group added successfully! \n Group: {group.value}")
-                    else:
-                        print("Group already added!")
-                except ValueError:
-                    print("Invalid group name! Please try again.")
+                
+                # Find matching group
+                group = None
+                for g in Group:
+                    if g.value.lower() == group_input.lower():
+                        group = g
+                        break
+                
+                if group is None:
+                    print(f"Invalid group '{group_input}'. Available groups: {', '.join([g.value for g in Group])}")
+                    continue
+                
+                if group not in groups:
+                    groups.append(group)
+                    print(f"Group added successfully! \n Group: {group.value}")
+                else:
+                    print("Group already added!")
             
             customer = Customer(customer_id=customer_id, name=name, tier=tier, groups=groups)
             Memory.add_customer_with_loyalty(customer)
@@ -185,8 +203,16 @@ class Main:
             for tier in Tier:
                 print(f"  {tier.value}")
 
-            tier_input = input("Enter tier (Silver, Gold or Platinum): ").upper()
-            tier = Tier(tier_input)
+            tier_input = input("Enter tier (Silver, Gold or Platinum): ").strip()
+            tier = None
+            for t in Tier:
+                if t.value.lower() == tier_input.lower():
+                    tier = t
+                    break
+            
+            if tier is None:
+                print(f"Invalid tier '{tier_input}'. Available tiers: {', '.join([t.value for t in Tier])}")
+                return
             
             discount_rate = float(input("Enter discount rate (0.0 to 1.0): "))
             min_qty = int(input("Enter minimum quantity: "))
@@ -231,8 +257,16 @@ class Main:
             for group in Group:
                 print(f"  {group.value}")
             
-            group_input = input("Enter group: ").upper()
-            group = Group(group_input)
+            group_input = input("Enter group: ").strip()
+            group = None
+            for g in Group:
+                if g.value.lower() == group_input.lower():
+                    group = g
+                    break
+            
+            if group is None:
+                print(f"Invalid group '{group_input}'. Available groups: {', '.join([g.value for g in Group])}")
+                return
             
             discount_rate = float(input("Enter discount rate (0.0 to 1.0): "))
             min_qty = int(input("Enter minimum quantity: "))
@@ -260,7 +294,6 @@ class Main:
 
     @staticmethod
     def place_order():
-        """Place a new order"""
         try:
             print("\n--- Place Order ---")
             Memory.view_customers()
@@ -356,7 +389,7 @@ class Main:
             print("-" * 60)
             for i, result in enumerate(results, 1):
                 Memory.add_result(result['product_id'], result['price'], result['price_type'])
-                print(f"{i}. Product {result['product_id']}: ${result['price']} ({result['price_type']})")
+                print(f"{i}. Product {result['product_id']}: LKR {result['price']} ({result['price_type']})")
             
             print(f"\nCalculated prices for {len(results)} orders.")
             print("Results stored in memory.")
