@@ -165,4 +165,57 @@ The system was built following several key design principles with specific reaso
 - **Focus**: Emphasizes business logic over presentation
 - **Development Speed**: Faster to build and iterate
 
+### 9. Assumptions and Relationships Taken
+
+The system operates under several key assumptions and implements specific relationships that define its behavior:
+
+#### **9.1 Business Logic Assumptions**
+- **Best Price Strategy**: The system always selects the lowest applicable price among all available discounts, assuming customers benefit from the best deal
+- **Cumulative Discounts**: Discounts are not cumulative - only one discount type applies per order (the best one)
+- **Minimum Quantity Enforcement**: All discount rules require minimum quantity thresholds to be met for eligibility
+- **Price Precision**: All prices are handled as integers (assuming smallest currency unit, e.g., cents/paise)
+
+#### **9.2 Customer Relationships**
+- **Tier Hierarchy**: PLATINUM > GOLD > SILVER (assumed business value hierarchy)
+- **Group Membership**: Customers can belong to multiple groups simultaneously (VIP, BULK, REGULAR)
+- **Loyalty Status**: Customer-specific pricing overrides group and tier pricing when it offers better value
+- **Customer Persistence**: Customer data remains in memory until explicitly cleared
+
+#### **9.3 Product Relationships**
+- **Base Price Foundation**: Every product has a base price that serves as the fallback option
+- **Pricing Rule Association**: Products can have multiple pricing rules (tier, group) but each rule is unique per product-tier/group combination
+- **Product Availability**: All products are assumed to be available for purchase with unlimited inventory
+
+#### **9.4 Pricing Rule Relationships**
+- **Inheritance Structure**: All pricing classes (TieredPrices, GroupedPrices, LoyaltyPrices) inherit from abstract Price class
+- **Rule Priority**: Loyalty > Group > Tier > Base (when prices are equal, loyalty takes precedence)
+- **Quantity Dependencies**: Each pricing rule has independent minimum quantity requirements
+- **Rule Validation**: Discount rates are assumed to be between 0.0 and 1.0 (0% to 100%)
+
+#### **9.5 System State Assumptions**
+- **Memory Persistence**: Data exists only during application runtime (no database persistence)
+- **Single User**: System assumes single-user operation without concurrent access concerns
+- **Error Recovery**: System continues operation even if individual operations fail
+- **Data Integrity**: Users are responsible for entering valid data (basic validation provided)
+
+#### **9.6 Calculation Relationships**
+- **Price Formula**: `Final Price = Base Price × (1 - Discount Rate) × Quantity`
+- **Comparison Logic**: Prices are compared numerically to find the minimum value
+- **Result Format**: Product IDs are formatted as "P001", "P002", etc. for display purposes
+- **Price Types**: Results indicate which pricing rule was applied (NORMAL, TIER, GROUP, CUSTOMER)
+
+#### **9.7 Data Structure Relationships**
+- **Nested Storage**: `customers = [[Customer, LoyaltyPrices]]` and `products = [[Product, TierPrices, GroupPrices]]`
+- **Dictionary Conversion**: Objects are converted to dictionaries for price calculation functions
+- **Key Relationships**: Customer ID and Product ID serve as primary keys for data retrieval
+- **Reference Integrity**: No foreign key constraints - relationships maintained through ID matching
+
+#### **9.8 Operational Assumptions**
+- **Menu Navigation**: Users interact through numbered menu options in sequential order
+- **Data Dependencies**: Products and customers must exist before placing orders or calculating prices
+- **Sample Data**: Provided sample data represents realistic business scenarios
+- **System Lifecycle**: Clear all data → Load data → Place orders → Calculate prices → View results
+
+These assumptions and relationships form the foundation of the pricing engine's behavior and ensure consistent, predictable operation across all system functions.
+
 The enhanced system provides a complete pricing engine with flexible discount rules and automatic best-price calculation.

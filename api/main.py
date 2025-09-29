@@ -14,11 +14,7 @@ from constants.group import Group
 from constants.tier import Tier
 from price_calculator import find_best_applicable_price
 
-app = FastAPI(
-    title="Pricing Engine API",
-    description="A FastAPI application for dynamic pricing with tier, group, and loyalty discounts",
-    version="2.0.0"
-)
+# FastAPI app is now created above with lifespan
 
 # Pydantic models for request/response
 class OrderRequest(BaseModel):
@@ -59,28 +55,110 @@ class SystemStatus(BaseModel):
     results_count: int
     sample_data_loaded: bool
 
-# Initialize the API
-@app.on_event("startup")
-async def startup_event():
-    # Initialize the system on startup
+# Additional Pydantic models for CRUD operations
+class CustomerCreate(BaseModel):
+    customer_id: int
+    name: str
+    tier: str
+    groups: List[str]
+
+class ProductCreate(BaseModel):
+    product_id: int
+    name: str
+    base_price: float
+
+class TierPriceRule(BaseModel):
+    product_id: int
+    tier: str
+    discount_rate: float
+    min_qty: int
+
+class GroupPriceRule(BaseModel):
+    product_id: int
+    group: str
+    discount_rate: float
+    min_qty: int
+
+class LoyaltyPriceRule(BaseModel):
+    customer_id: int
+    product_id: int
+    discount_rate: float
+    min_qty: int
+
+class OrderHistory(BaseModel):
+    order_id: int
+    customer_id: int
+    product_id: int
+    quantity: int
+    timestamp: str
+
+# Initialize the API using modern lifespan events
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
     Memory.clear_all()
     print("Pricing Engine API started - Memory cleared")
+    yield
+    # Shutdown (if needed)
+    print("Pricing Engine API shutting down")
+
+app = FastAPI(
+    title="Pricing Engine API",
+    description="A FastAPI application for dynamic pricing with tier, group, and loyalty discounts",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
 @app.get("/")
 async def root():
     # Root endpoint with API information
     return {
-        "message": "Welcome to Pricing Engine API v2.0",
+        "message": "Welcome to Pricing Engine API v2.0 - RESTful Edition",
         "documentation": "/docs",
         "health": "/health",
+        "version": "2.0.0",
         "endpoints": {
-            "load_sample_data": "POST /load-sample-data",
-            "calculate_price": "POST /calculate-price",
-            "calculate_bulk_prices": "POST /calculate-bulk-prices",
-            "get_customers": "GET /customers",
-            "get_products": "GET /products",
-            "get_status": "GET /status"
-        }
+            "system": {
+                "health": "GET /health",
+                "status": "GET /status", 
+                "load_sample_data": "POST /load-sample-data",
+                "clear_data": "DELETE /clear-data"
+            },
+            "customers": {
+                "list_customers": "GET /customers",
+                "get_customer": "GET /customers/{customer_id}",
+                "create_customer": "POST /customers",
+                "delete_customer": "DELETE /customers/{customer_id}",
+                "add_loyalty_pricing": "POST /customers/{customer_id}/loyalty-prices"
+            },
+            "products": {
+                "list_products": "GET /products",
+                "get_product": "GET /products/{product_id}",
+                "create_product": "POST /products",
+                "delete_product": "DELETE /products/{product_id}",
+                "add_tier_pricing": "POST /products/{product_id}/tier-prices",
+                "add_group_pricing": "POST /products/{product_id}/group-prices"
+            },
+            "pricing": {
+                "calculate_single_price": "POST /calculate-price",
+                "calculate_bulk_prices": "POST /calculate-bulk-prices"
+            },
+            "orders": {
+                "get_orders": "GET /orders",
+                "get_results": "GET /results"
+            }
+        },
+        "features": [
+            "Complete CRUD operations for customers and products",
+            "Dynamic pricing rules management",
+            "Tier, Group, and Loyalty pricing support",
+            "Bulk price calculations",
+            "Order tracking and result history",
+            "Comprehensive error handling",
+            "OpenAPI/Swagger documentation"
+        ]
     }
 
 @app.get("/health")
@@ -303,6 +381,277 @@ async def get_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving status: {str(e)}")
 
+# CRUD Operations for Customers
+@app.post("/customers", response_model=CustomerInfo)
+async def create_customer(customer_data: CustomerCreate):
+
+    try:
+        # Validate tier and groups
+        tier = Tier(customer_data.tier.upper())
+        groups = [Group(g.upper()) for g in customer_data.groups]
+        
+        # Check if customer already exists
+        if Memory.get_customer_by_id(customer_data.customer_id):
+            raise HTTPException(status_code=400, detail=f"Customer with ID {customer_data.customer_id} already exists")
+        
+        # Create customer
+        customer = Customer(customer_data.customer_id, customer_data.name, tier, groups)
+        Memory.add_customer_with_loyalty(customer)
+        
+        return CustomerInfo(
+            customer_id=customer.customer_id,
+            name=customer.name,
+            tier=customer.tier.value,
+            groups=[group.value for group in customer.groups],
+            loyalty_products_count=0
+        )
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid tier or group: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating customer: {str(e)}")
+
+@app.get("/customers/{customer_id}", response_model=CustomerInfo)
+async def get_customer(customer_id: int):
+
+    try:
+        customer_data = Memory.get_customer_by_id(customer_id)
+        if not customer_data:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        
+        customer, loyalty_prices = customer_data
+        return CustomerInfo(
+            customer_id=customer.customer_id,
+            name=customer.name,
+            tier=customer.tier.value,
+            groups=[group.value for group in customer.groups],
+            loyalty_products_count=len(loyalty_prices)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving customer: {str(e)}")
+
+@app.delete("/customers/{customer_id}")
+async def delete_customer(customer_id: int):
+
+    try:
+        customer_data = Memory.get_customer_by_id(customer_id)
+        if not customer_data:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        
+        # Remove customer from memory
+        Memory.customers = [c for c in Memory.customers if c[0].customer_id != customer_id]
+        
+        return {"message": f"Customer {customer_id} deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting customer: {str(e)}")
+
+# CRUD Operations for Products
+@app.post("/products", response_model=ProductInfo)
+async def create_product(product_data: ProductCreate):
+
+    try:
+        # Check if product already exists
+        if Memory.get_product_by_id(product_data.product_id):
+            raise HTTPException(status_code=400, detail=f"Product with ID {product_data.product_id} already exists")
+        
+        # Create product
+        product = Product(product_data.product_id, product_data.name, product_data.base_price)
+        Memory.add_product_with_pricing(product)
+        
+        return ProductInfo(
+            product_id=product.product_id,
+            name=product.name,
+            base_price=product.base_price,
+            tier_prices_count=0,
+            group_prices_count=0
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating product: {str(e)}")
+
+@app.get("/products/{product_id}", response_model=ProductInfo)
+async def get_product(product_id: int):
+
+    try:
+        product_data = Memory.get_product_by_id(product_id)
+        if not product_data:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        product, tier_prices, group_prices = product_data
+        return ProductInfo(
+            product_id=product.product_id,
+            name=product.name,
+            base_price=product.base_price,
+            tier_prices_count=len(tier_prices),
+            group_prices_count=len(group_prices)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving product: {str(e)}")
+
+@app.delete("/products/{product_id}")
+async def delete_product(product_id: int):
+
+    try:
+        product_data = Memory.get_product_by_id(product_id)
+        if not product_data:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Remove product from memory
+        Memory.products = [p for p in Memory.products if p[0].product_id != product_id]
+        
+        return {"message": f"Product {product_id} deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting product: {str(e)}")
+
+# Pricing Rules Management
+@app.post("/products/{product_id}/tier-prices")
+async def add_tier_price_rule(product_id: int, rule: TierPriceRule):
+
+    try:
+        product_data = Memory.get_product_by_id(product_id)
+        if not product_data:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        product, tier_prices, group_prices = product_data
+        
+        # Validate tier
+        tier = Tier(rule.tier.upper())
+        
+        # Check if rule already exists
+        for tp in tier_prices:
+            if tp['tier'] == tier.value:
+                raise HTTPException(status_code=400, detail=f"Tier pricing rule for {tier.value} already exists")
+        
+        # Add new rule
+        tier_rule = {
+            "product_id": product_id,
+            "tier": tier.value,
+            "discount_rate": rule.discount_rate,
+            "min_qty": rule.min_qty
+        }
+        tier_prices.append(tier_rule)
+        
+        return {"message": f"Tier pricing rule added for {tier.value}"}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid tier: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding tier pricing rule: {str(e)}")
+
+@app.post("/products/{product_id}/group-prices")
+async def add_group_price_rule(product_id: int, rule: GroupPriceRule):
+
+    try:
+        product_data = Memory.get_product_by_id(product_id)
+        if not product_data:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        product, tier_prices, group_prices = product_data
+        
+        # Validate group
+        group = Group(rule.group.upper())
+        
+        # Check if rule already exists
+        for gp in group_prices:
+            if gp['group'] == group.value:
+                raise HTTPException(status_code=400, detail=f"Group pricing rule for {group.value} already exists")
+        
+        # Add new rule
+        group_rule = {
+            "product_id": product_id,
+            "group": group.value,
+            "discount_rate": rule.discount_rate,
+            "min_qty": rule.min_qty
+        }
+        group_prices.append(group_rule)
+        
+        return {"message": f"Group pricing rule added for {group.value}"}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid group: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding group pricing rule: {str(e)}")
+
+@app.post("/customers/{customer_id}/loyalty-prices")
+async def add_loyalty_price_rule(customer_id: int, rule: LoyaltyPriceRule):
+
+    try:
+        customer_data = Memory.get_customer_by_id(customer_id)
+        if not customer_data:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        
+        # Validate product exists
+        if not Memory.get_product_by_id(rule.product_id):
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        customer, loyalty_prices = customer_data
+        
+        # Check if rule already exists
+        for lp in loyalty_prices:
+            if lp['product_id'] == rule.product_id:
+                raise HTTPException(status_code=400, detail=f"Loyalty pricing for product {rule.product_id} already exists")
+        
+        # Add new rule
+        loyalty_rule = {
+            "customer_id": customer_id,
+            "product_id": rule.product_id,
+            "discount_rate": rule.discount_rate,
+            "min_qty": rule.min_qty
+        }
+        loyalty_prices.append(loyalty_rule)
+        
+        return {"message": f"Loyalty pricing rule added for product {rule.product_id}"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding loyalty pricing rule: {str(e)}")
+
+# Order Management
+@app.get("/orders")
+async def get_orders():
+
+    try:
+        orders_with_ids = []
+        for i, order in enumerate(Memory.orders, 1):
+            orders_with_ids.append({
+                "order_id": i,
+                "customer_id": order['customer_id'],
+                "product_id": order['product_id'],
+                "quantity": order['quantity'],
+                "timestamp": "2025-09-29T00:00:00"  # Mock timestamp
+            })
+        
+        return {"orders": orders_with_ids, "total_orders": len(orders_with_ids)}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving orders: {str(e)}")
+
+@app.get("/results")
+async def get_results():
+
+    try:
+        return {"results": Memory.results, "total_results": len(Memory.results)}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving results: {str(e)}")
+
 @app.delete("/clear-data")
 async def clear_data():
     # Clear all data from memory
@@ -315,4 +664,4 @@ async def clear_data():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
