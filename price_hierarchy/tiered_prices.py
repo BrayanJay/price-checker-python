@@ -5,7 +5,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from constants.tier import Tier
 from models.product import Product
 from constants.price import PriceType
-from models.place_order import PlaceOrder
 
 class TieredPrices(Price):
 
@@ -37,7 +36,7 @@ class TieredPrices(Price):
         for tp in TieredPrices.tiered_prices:
             print(f"Product ID: {tp['product'].product_id} | Price Type: {tp['type']} | Tier Type: {tp['tier']} | Discount Rate: {tp['discount_rate']} | Min Quantity: {tp['min_qty']}")
 
-    def calculate_applicable_price(order: PlaceOrder):
+    def calculate_applicable_price(order):
 
         for tp in TieredPrices.tiered_prices:
 

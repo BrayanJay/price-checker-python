@@ -1,11 +1,11 @@
-from .price_interface import Price
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from .price_interface import Price
 from models.product import Product
 from models.customer import Customer
 from constants.price import PriceType
-from models.place_order import PlaceOrder
 
 class LoyaltyPrices(Price):
 
@@ -34,7 +34,7 @@ class LoyaltyPrices(Price):
         for lp in LoyaltyPrices.loyalty_prices:
             print(f"Customer ID: {lp['customer'].customer_id} | Product ID: {lp['product'].product_id} | Price Type: {lp['type']} | Discount Rate: {lp['discount_rate']} | Min Quantity: {lp['min_qty']}")
     
-    def calculate_applicable_price(order: PlaceOrder):
+    def calculate_applicable_price(order):
 
         for lp in LoyaltyPrices.loyalty_prices:
 

@@ -5,7 +5,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from constants.group import Group
 from models.product import Product
 from constants.price import PriceType
-from models.place_order import PlaceOrder
 
 class GroupedPrices(Price):
 
@@ -37,7 +36,7 @@ class GroupedPrices(Price):
         for gp in GroupedPrices.grouped_prices:
             print(f"Product ID: {gp['product'].product_id} | Price Type: {gp['type']} | Group Type: {gp['group']} | Discount Rate: {gp['discount_rate']} | Min Quantity: {gp['min_qty']}")
 
-    def calculate_applicable_price(order: PlaceOrder):
+    def calculate_applicable_price(order):
 
         for gp in GroupedPrices.grouped_prices:
 

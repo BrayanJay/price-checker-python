@@ -1,3 +1,8 @@
+from price_hierarchy.group_prices import GroupedPrices
+from price_hierarchy.tiered_prices import TieredPrices
+from price_hierarchy.loyalty_prices import LoyaltyPrices
+
+
 class PlaceOrder:
     placed_orders = []
 
